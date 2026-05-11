@@ -1,16 +1,39 @@
 @import "tailwindcss";
 
+:root {
+    --bg-app: #ffffff;
+    --bg-sidebar: #f0f2f5;
+    --bg-chat: #efeae2;
+    --bg-bubble-me: #d9fdd3;
+    --bg-bubble-other: #ffffff;
+    --text-primary: #111b21;
+    --text-secondary: #667781;
+    --border-color: #f0f2f5;
+}
+
+.dark {
+    --bg-app: #111b21;
+    --bg-sidebar: #202c33;
+    --bg-chat: #0b141a;
+    --bg-bubble-me: #005c4b;
+    --bg-bubble-other: #202c33;
+    --text-primary: #e9edef;
+    --text-secondary: #8696a0;
+    --border-color: #2a3942;
+}
+
+body {
+    @apply antialiased;
+    background-color: var(--bg-app);
+    color: var(--text-primary);
+    font-family: 'Inter', sans-serif;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
 @theme { 
     --color-primary: rgba(97, 94, 240, 1);
     --color-secondary: rgba(0, 0, 0, 0.4);
-    --color-divider: #F1F1F1;
-}
-
-@layer base {
-    body {
-        @apply antialiased text-gray-900;
-        font-family: 'Inter', sans-serif;
-    }
+    --color-divider: var(--border-color);
 }
 
 /* Custom Scrollbar */
@@ -27,26 +50,44 @@
     border-radius: 10px;
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgba(0, 0, 0, 0.2);
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
 }
 
-/* Animations */
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+/* Audio Player Styling */
+audio::-webkit-media-controls-panel {
+    background-color: rgba(0, 0, 0, 0.05);
 }
 
-@keyframes zoomIn {
-    from { transform: scale(0.95); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
+.dark audio::-webkit-media-controls-panel {
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
-.animate-in {
-    animation-duration: 0.2s;
-    animation-fill-mode: both;
+audio {
+    height: 36px;
+    border-radius: 8px;
+    background: #f1f1f1;
 }
 
-.fade-in { animation-name: fadeIn; }
-.zoom-in-95 { animation-name: zoomIn; }
+.dark audio {
+    background: #2a3942;
+}
+
+@keyframes pulse-red {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.2); opacity: 0.7; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-pulse-red {
+    animation: pulse-red 1.5s infinite ease-in-out;
+}
+
+/* Wallpaper overrides */
+.wallpaper-blue { background-color: #007bff !important; }
+.wallpaper-green { background-color: #28a745 !important; }
+.wallpaper-rose { background-color: #e83e8c !important; }
+.wallpaper-slate { background-color: #6c757d !important; }
+.wallpaper-amber { background-color: #ffc107 !important; }
+.wallpaper-default { background-color: var(--bg-chat) !important; }
 

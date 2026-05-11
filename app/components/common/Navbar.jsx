@@ -1,9 +1,8 @@
 "use client"
 import Link from 'next/link'
-import React, { useState } from 'react'
+import React from 'react'
 import { NavLinks } from './Helper'
 import { Setting } from './Icons'
-
 
 const Navbar = ({ activeTab, setActiveTab }) => {
   return (
@@ -16,18 +15,30 @@ const Navbar = ({ activeTab, setActiveTab }) => {
           <div 
             key={index} 
             onClick={() => setActiveTab(index)} 
-            className={`flex items-center justify-center w-12 h-12 rounded-xl transition-all cursor-pointer duration-200 ${activeTab === index ? "bg-white text-primary shadow-sm" : "text-gray-500 hover:bg-gray-200"} `}
+            className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl transition-all cursor-pointer duration-200 ${activeTab === index ? "bg-white text-primary shadow-sm" : "text-gray-500 hover:bg-gray-200"} `}
             title={items.name || `Tab ${index + 1}`}
           >
             <div className="scale-110">
               {items.link}
             </div>
+            <span className="hidden md:block mt-1 text-[10px] font-medium text-gray-600">
+              {items.name}
+            </span>
           </div>
         ))}
       </div>
-      <div className='hidden md:block'>
-        <button onClick={() => alert("Settings panel coming soon!")} className='w-12 h-12 flex items-center justify-center rounded-xl text-gray-500 hover:bg-gray-200 transition-all hover:rotate-90 duration-300'>
-          <Setting />
+      <div>
+        <button 
+          onClick={() => setActiveTab(4)} 
+          className={`flex flex-col items-center justify-center w-12 h-12 rounded-xl transition-all cursor-pointer duration-200 ${activeTab === 4 ? 'bg-white text-primary shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}
+          title="Settings"
+        >
+          <div className="scale-110  hover:rotate-360 transition-all duration-300">
+            <Setting />
+          </div>
+          <span className="hidden md:block mt-1 text-[10px] font-medium text-gray-600">
+            Settings
+          </span>
         </button>
       </div>
     </section>
