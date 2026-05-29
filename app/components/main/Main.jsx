@@ -11,11 +11,10 @@ import Calls from '../home/Calls'
 import Settings from '../home/Settings'
 import Image from 'next/image'
 import { useAlert } from '../../context/AlertContext'
-import { getChatService } from '../../lib/ChatService'
+import { chatService } from '../../lib/ChatService'
 import { Call } from '../common/Icons'
 
 const Main = ({ activeTab, setActiveTab, onLogout }) => {
-    const chatService = useRef(getChatService()).current;
     const [chatPerson, setChatPerson] = useState(null);
     const [chatList, setChatList] = useState([]);
     const [messageFilter, setMessageFilter] = useState("All Messages");

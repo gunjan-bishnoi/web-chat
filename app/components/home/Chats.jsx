@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { SearchSmall, DeleteIcon } from '../common/Icons'
 import Image from 'next/image'
+import { chatService } from '../../lib/ChatService'
 
-const Chats = ({ setChatPerson, messageFilter, chatList, onDeleteChat, chatService }) => {
+const Chats = ({ setChatPerson, messageFilter, chatList, onDeleteChat }) => {
   const [search, setSearch] = useState("");
   const [data, setData] = useState(chatList);
   const [typingContacts, setTypingContacts] = useState(new Set());

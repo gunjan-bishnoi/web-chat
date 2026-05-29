@@ -3,8 +3,9 @@ import React, { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { Call, SearchHeader } from './Icons'
 import { useAlert } from '../../context/AlertContext'
+import { chatService } from '../../lib/ChatService'
 
-const ChatBoxHeading = ({ chatPerson, setChatPerson, setIsDirectoryOpen, isDirectoryOpen, isCalling, onStartCall, onEndCall, onClearChat, searchMessageQuery, setSearchMessageQuery, chatService }) => {
+const ChatBoxHeading = ({ chatPerson, setChatPerson, setIsDirectoryOpen, isDirectoryOpen, isCalling, onStartCall, onEndCall, onClearChat, searchMessageQuery, setSearchMessageQuery }) => {
     const { showAlert } = useAlert();
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [contactStatus, setContactStatus] = useState({ isOnline: false, isTyping: false, lastSeen: new Date() });

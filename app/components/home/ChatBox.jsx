@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
-import { DoubleCheck, EmojiIcon, GalleryIcon, Sent, EditIcon, DeleteIcon } from '../common/Icons'
+import { DoubleCheck, EmojiIcon, GalleryIcon, Sent, EditIcon, DeleteIcon, ReplyIcon } from '../common/Icons'
 import { useAlert } from '../../context/AlertContext'
+import { chatService } from '../../lib/ChatService'
 import data from '@emoji-mart/data'
 import Picker from '@emoji-mart/react'
 
@@ -27,7 +28,7 @@ function getDateLabel(ts) {
     return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
 }
 
-const ChatBox = ({ chatPerson, chatService, searchMessageQuery }) => {
+const ChatBox = ({ chatPerson, searchMessageQuery }) => {
     const { showAlert, showConfirm } = useAlert();
     const [message, setMessage] = useState("");
     const [messages, setMessages] = useState([]);
@@ -36,6 +37,8 @@ const ChatBox = ({ chatPerson, chatService, searchMessageQuery }) => {
     const [cursorPosition, setCursorPosition] = useState(0);
     const [editingId, setEditingId] = useState(null);
     const [editText, setEditText] = useState("");
+    const [replyingTo, setReplyingTo] = useState(null);
+    const [reactionPickerId, setReactionPickerId] = useState(null);
     const [isTyping, setIsTyping] = useState(false);
     const messageEnd = useRef(null);
     const inputRef = useRef(null);
@@ -66,6 +69,7 @@ const ChatBox = ({ chatPerson, chatService, searchMessageQuery }) => {
             chatService.on('status-changed', (d) => { if (d.name === name) setMessages(chatService.getMessages(name)); }),
             chatService.on('typing', (d) => { if (d.name === name) setIsTyping(d.isTyping); }),
             chatService.on('chat-cleared', (d) => { if (d.name === name) setMessages([]); }),
+            chatService.on('message-reacted', (d) => { if (d.name === name) setMessages(chatService.getMessages(name)); }),
             chatService.on('wallpaper-updated', (w) => setWallpaper(w)),
         ];
         return () => unsubs.forEach(fn => fn());
@@ -117,9 +121,11 @@ const ChatBox = ({ chatPerson, chatService, searchMessageQuery }) => {
         if ((!message.trim() && !selectedImage) || !chatPerson) return;
         let imageData = null;
         if (selectedImage) imageData = await readFileAsDataURL(selectedImage.file);
-        chatService.sendMessage(chatPerson.name, message.trim(), imageData);
+        chatService.sendMessage(chatPerson.name, message.trim(), imageData, null, replyingTo);
         if (selectedImage?.url) URL.revokeObjectURL(selectedImage.url);
-        setSelectedImage(null); setMessage("");
+        setSelectedImage(null); 
+        setMessage("");
+        setReplyingTo(null);
     };
 
     const startRecording = async () => {
@@ -200,6 +206,8 @@ const ChatBox = ({ chatPerson, chatService, searchMessageQuery }) => {
 
     const handleDelete = (id) => { showConfirm("Delete this message?", () => { chatService.deleteMessage(chatPerson.name, id); setMessages(chatService.getMessages(chatPerson.name)); }); };
     const handleEdit = (msg) => { setEditingId(msg.id); setEditText(msg.text); };
+    const handleReply = (msg) => { setReplyingTo(msg); inputRef.current?.focus(); };
+    const handleReaction = (msgId, emoji) => { chatService.addReaction(chatPerson.name, msgId, emoji); setReactionPickerId(null); };
     const saveEdit = () => { if (!editText.trim()) return; chatService.editMessage(chatPerson.name, editingId, editText.trim()); setMessages(chatService.getMessages(chatPerson.name)); setEditingId(null); };
 
     // Group messages by date
@@ -223,8 +231,26 @@ const ChatBox = ({ chatPerson, chatService, searchMessageQuery }) => {
                         return (
                             <React.Fragment key={msg.id}>
                                 {dateSep}
-                                <div className={`flex w-full mb-1.5 ${msg.sender === "me" ? "justify-end" : "justify-start"}`}>
+                                <div id={`msg_${msg.id}`} className={`flex w-full mb-1.5 ${msg.sender === "me" ? "justify-end" : "justify-start"}`}>
                                     <div className={`max-w-[85%] md:max-w-[65%] min-w-[85px] py-1.5 px-2.5 rounded-lg text-[14.2px] shadow-sm relative group transition-all duration-200 hover:shadow-md ${msg.sender === "me" ? "bg-[var(--bg-bubble-me)] text-[var(--text-primary)] rounded-tr-none" : "bg-[var(--bg-bubble-other)] text-[var(--text-primary)] rounded-tl-none"}`}>
+                                        {msg.replyTo && (
+                                            <div 
+                                                onClick={() => {
+                                                    const el = document.getElementById(`msg_${msg.replyTo.id}`);
+                                                    el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                                    el?.classList.add('highlight-msg');
+                                                    setTimeout(() => el?.classList.remove('highlight-msg'), 2000);
+                                                }}
+                                                className="mb-1.5 p-2 rounded bg-black/5 border-l-4 border-primary/40 cursor-pointer hover:bg-black/10 transition-colors"
+                                            >
+                                                <p className="text-[11px] font-bold text-primary truncate">
+                                                    {msg.replyTo.sender === 'me' ? 'You' : msg.replyTo.sender}
+                                                </p>
+                                                <p className="text-[12px] text-gray-500 truncate">
+                                                    {msg.replyTo.text || (msg.replyTo.image ? '📷 Photo' : msg.replyTo.audio ? '🎤 Voice' : '')}
+                                                </p>
+                                            </div>
+                                        )}
                                         {editingId === msg.id ? (
                                             <div className="flex flex-col gap-2 min-w-[200px]">
                                                 <textarea value={editText} onChange={(e) => setEditText(e.target.value)} className="w-full bg-white/50 p-2 rounded border border-primary/20 outline-none text-sm resize-none" rows={2} autoFocus onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveEdit(); } }} />
@@ -248,15 +274,38 @@ const ChatBox = ({ chatPerson, chatService, searchMessageQuery }) => {
                                                     </div>
                                                 )}
                                                 {msgText && <p className="leading-relaxed whitespace-pre-wrap break-words pr-2 pb-5">{searchMessageQuery ? highlightText(msgText, searchMessageQuery) : msgText}</p>}
-                                                {msg.sender === 'me' && (
-                                                    <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5 z-20">
-                                                        <button onClick={() => handleEdit(msg)} className="p-1 text-gray-400 hover:text-primary transition-colors"><EditIcon /></button>
-                                                        <button onClick={() => handleDelete(msg.id)} className="p-1 text-gray-400 hover:text-red-500 transition-colors"><DeleteIcon /></button>
+                                                {/* Message Actions Toolbar */}
+                                                <div className={`absolute -top-7 ${msg.sender === 'me' ? 'right-0' : 'left-0'} opacity-0 group-hover:opacity-100 transition-all duration-300 flex gap-1 z-30 translate-y-2 group-hover:translate-y-0`}>
+                                                    <div className="flex items-center gap-1 bg-white/95 backdrop-blur-md border border-gray-100 shadow-xl rounded-full px-1.5 py-1">
+                                                        <button onClick={() => handleReply(msg)} title="Reply" className="p-2 text-gray-500 hover:text-primary hover:bg-primary/5 rounded-full transition-all active:scale-90"><ReplyIcon className="w-4 h-4" /></button>
+                                                        <button onClick={() => setReactionPickerId(reactionPickerId === msg.id ? null : msg.id)} title="React" className="p-2 text-gray-500 hover:text-primary hover:bg-primary/5 rounded-full transition-all active:scale-90"><EmojiIcon className="w-4 h-4" /></button>
+                                                        {msg.sender === 'me' && (
+                                                            <button onClick={() => handleEdit(msg)} title="Edit" className="p-2 text-gray-500 hover:text-primary hover:bg-primary/5 rounded-full transition-all active:scale-90"><EditIcon className="w-4 h-4" /></button>
+                                                        )}
+                                                        <button onClick={() => handleDelete(msg.id)} title="Delete" className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-full transition-all active:scale-90"><DeleteIcon className="w-4 h-4" /></button>
+                                                    </div>
+                                                </div>
+
+                                                {/* Quick Reaction Picker */}
+                                                {reactionPickerId === msg.id && (
+                                                    <div className={`absolute bottom-full mb-3 ${msg.sender === 'me' ? 'right-0' : 'left-0'} bg-white shadow-2xl rounded-2xl px-2 py-1.5 flex gap-1 z-50 border border-gray-100 animate-in zoom-in-95 fade-in duration-200 origin-bottom`}>
+                                                        {['❤️', '👍', '😂', '😮', '😢', '🔥'].map(emoji => (
+                                                            <button key={emoji} onClick={() => handleReaction(msg.id, emoji)} className="hover:scale-125 hover:bg-gray-50 transition-all p-2 rounded-xl text-xl active:scale-95">
+                                                                {emoji}
+                                                            </button>
+                                                        ))}
                                                     </div>
                                                 )}
-                                                {msg.sender !== 'me' && (
-                                                    <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity z-20">
-                                                        <button onClick={() => handleDelete(msg.id)} className="p-1 text-gray-400 hover:text-red-500 transition-colors"><DeleteIcon /></button>
+
+                                                {/* Reactions Display */}
+                                                {msg.reactions && msg.reactions.length > 0 && (
+                                                    <div className={`absolute -bottom-4 ${msg.sender === 'me' ? 'right-1' : 'left-1'} flex flex-wrap gap-1 z-20`}>
+                                                        {msg.reactions.map((r, i) => (
+                                                            <div key={i} onClick={() => handleReaction(msg.id, r.emoji)} className="bg-white/90 backdrop-blur-sm border border-gray-100 shadow-sm rounded-full px-2 py-0.5 text-[12px] flex items-center gap-1 cursor-pointer hover:bg-white hover:shadow-md hover:scale-105 active:scale-95 transition-all">
+                                                                <span>{r.emoji}</span>
+                                                                {r.count > 1 && <span className="font-bold text-gray-500 text-[10px]">{r.count}</span>}
+                                                            </div>
+                                                        ))}
                                                     </div>
                                                 )}
                                                 <div className="absolute bottom-1 right-2 flex items-center gap-1 bg-inherit rounded-md pl-1">
@@ -291,6 +340,21 @@ const ChatBox = ({ chatPerson, chatService, searchMessageQuery }) => {
                 )}
                 <div ref={messageEnd}></div>
             </div>
+
+            {/* Reply Preview */}
+            {replyingTo && (
+                <div className="px-4 md:px-6 pb-2 z-10">
+                    <div className="relative max-w-2xl mx-auto w-full bg-white/80 backdrop-blur-md rounded-xl border-l-4 border-primary shadow-sm p-3 flex justify-between items-center animate-in slide-in-from-bottom-2 duration-200">
+                        <div className="flex-1 min-w-0">
+                            <p className="text-[12px] font-bold text-primary mb-0.5">Replying to {replyingTo.sender === 'me' ? 'yourself' : replyingTo.sender}</p>
+                            <p className="text-[13px] text-gray-600 truncate">{replyingTo.text || (replyingTo.image ? '📷 Photo' : replyingTo.audio ? '🎤 Voice' : '')}</p>
+                        </div>
+                        <button onClick={() => setReplyingTo(null)} className="ml-4 p-1.5 hover:bg-gray-100 rounded-full transition-colors">
+                            <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Image preview */}
             {selectedImage && (

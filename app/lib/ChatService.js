@@ -298,7 +298,7 @@ class ChatService {
     const msg = {
       id: this._id(), text: text || '', image, audio, sender: 'me',
       time: this._time(), timestamp: Date.now(),
-      status: 'sent', isEdited: false, replyTo,
+      status: 'sent', isEdited: false, replyTo, reactions: [],
     };
     const msgs = this.getMessages(name);
     msgs.push(msg);
@@ -325,6 +325,27 @@ class ChatService {
     if (m) { m.text = newText; m.isEdited = true; }
     this._saveMessages(name, msgs);
     this._emit('message-edited', { name, msgId });
+    return msgs;
+  }
+
+  addReaction(name, msgId, emoji) {
+    console.log('addReaction called:', { name, msgId, emoji });
+    const msgs = this.getMessages(name);
+    const m = msgs.find(x => x.id === msgId);
+    if (m) {
+      if (!m.reactions) m.reactions = [];
+      const existing = m.reactions.find(r => r.emoji === emoji);
+      if (existing) {
+        // If I already reacted with this emoji, remove it? (Toggle behavior)
+        // For simplicity, let's just add it or increment count if multiple people (mock)
+        // In a real app, we'd track WHO reacted.
+        m.reactions = m.reactions.filter(r => r.emoji !== emoji);
+      } else {
+        m.reactions.push({ emoji, count: 1 });
+      }
+      this._saveMessages(name, msgs);
+      this._emit('message-reacted', { name, msgId, reactions: m.reactions });
+    }
     return msgs;
   }
 
@@ -400,10 +421,7 @@ class ChatService {
   }
 }
 
-// Singleton
-let _instance = null;
-export function getChatService() {
-  if (!_instance) _instance = new ChatService();
-  return _instance;
-}
-export default ChatService;
+// Singleton Instance
+export const chatService = new ChatService();
+export const getChatService = () => chatService;
+export default chatService;

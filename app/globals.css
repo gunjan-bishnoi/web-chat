@@ -91,3 +91,14 @@ audio {
 .wallpaper-amber { background-color: #ffc107 !important; }
 .wallpaper-default { background-color: var(--bg-chat) !important; }
 
+/* Highlight message animation */
+@keyframes highlight {
+    0% { background-color: rgba(97, 94, 240, 0.2); }
+    100% { background-color: transparent; }
+}
+
+.highlight-msg {
+    animation: highlight 2s ease-out;
+}
+
+

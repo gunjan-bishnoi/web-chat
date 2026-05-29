@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import { Add, DropDown } from './Icons'
 import { ChatFilters } from './Helper'
-import { getChatService } from '../../lib/ChatService'
+import { chatService } from '../../lib/ChatService'
 import Image from 'next/image'
 
 const Messages = ({ messageFilter, setMessageFilter, onAddChat, chatCount, setActiveTab }) => {
-  const chatService = React.useRef(getChatService()).current;
   const [isAddOpen, setIsAddOpen] = useState(false);
   
   // Group creation state
