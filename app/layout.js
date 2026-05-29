@@ -16,6 +16,11 @@ const inter = Inter({
 export const metadata = {
   title: "Chat Web",
   description: "chat",
+  icons: {
+    icon: "/icon.png",
+    shortcut: "/favicon.ico",
+    apple: "/icon.png",
+  },
 };
 
 import { AlertProvider } from "./context/AlertContext";
